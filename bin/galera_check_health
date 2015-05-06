@@ -1,0 +1,22 @@
+WSREP_READY=`mysql -sN -e "SHOW GLOBAL STATUS LIKE 'wsrep_ready';" | sed 's/\s\+/ /g' | cut -d' ' -f2`
+WSREP_CONNECTED=`mysql -sN -e "SHOW GLOBAL STATUS LIKE 'wsrep_connected';" | sed 's/\s\+/ /g' | cut -d' ' -f2`
+WSREP_LOCAL_STATE=`mysql -sN -e "SHOW GLOBAL STATUS LIKE 'wsrep_local_state_comment';" | sed 's/\s\+/ /g' | cut -d' ' -f2`
+
+if [ "$WSREP_READY" != "ON" ]
+then
+  echo "'wsrep_ready' != 'ON', node not ready for queries"
+  exit 1
+fi
+if [ "$WSREP_CONNECTED" != "ON" ]
+then
+  echo "'wsrep_connected' != 'ON', node not connected to cluster component"
+  exit 1
+fi
+if [[ "$WSREP_LOCAL_STATE" != "Joining" && "$WSREP_LOCAL_STATE" != "Joined" && "$WSREP_LOCAL_STATE" != "Waiting for SST" && "$WSREP_LOCAL_STATE" != "Synced" && "$WSREP_LOCAL_STATE" != "Donor" ]]
+then
+  echo "'wsrep_local_state_comment' == '$WSREP_LOCAL_STATE', node not joined/joining a cluster"
+  exit 1
+fi
+
+echo "Node ready"
+exit 0
