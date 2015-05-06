@@ -1,22 +1,54 @@
+#!/bin/bash
+#
+# Do health check for current galera node
+#
+
+STARTUP_WAIT_MINUTES="${1:-5}"
+RUNNING_ETIME=`ps -p1 -o etime | grep [0-9] | sed 's/\s//g'`
+RUNNING_SECONDS=`echo $RUNNING_ETIME | awk -F $':' -f <(cat - <<-'EOF'
+  {
+    if (NF == 2) {
+      print $1*60 + $2
+    } else if (NF == 3) {
+      split($1, a, "-");
+      if (a[2] > 0) {
+        print ((a[1]*24+a[2])*60 + $2) * 60 + $3;
+      } else {
+        print ($1*60 + $2) * 60 + $3;
+      }
+    }
+  }
+EOF
+)`
+
+RUNNING_MINUTES=`expr $RUNNING_SECONDS / 60`
+
+# Just return ok if we are not yet running for $STARTUP_WAIT_MINUTES minutes
+if [ "$RUNNING_MINUTES" -le "$STARTUP_WAIT_MINUTES" ]
+then
+  echo "ok"
+  exit 0
+fi
+
 WSREP_READY=`mysql -sN -e "SHOW GLOBAL STATUS LIKE 'wsrep_ready';" | sed 's/\s\+/ /g' | cut -d' ' -f2`
 WSREP_CONNECTED=`mysql -sN -e "SHOW GLOBAL STATUS LIKE 'wsrep_connected';" | sed 's/\s\+/ /g' | cut -d' ' -f2`
 WSREP_LOCAL_STATE=`mysql -sN -e "SHOW GLOBAL STATUS LIKE 'wsrep_local_state_comment';" | sed 's/\s\+/ /g' | cut -d' ' -f2`
 
 if [ "$WSREP_READY" != "ON" ]
 then
-  echo "'wsrep_ready' != 'ON', node not ready for queries"
+  echo "fail"
   exit 1
 fi
 if [ "$WSREP_CONNECTED" != "ON" ]
 then
-  echo "'wsrep_connected' != 'ON', node not connected to cluster component"
+  echo "fail"
   exit 1
 fi
 if [[ "$WSREP_LOCAL_STATE" != "Joining" && "$WSREP_LOCAL_STATE" != "Joined" && "$WSREP_LOCAL_STATE" != "Waiting for SST" && "$WSREP_LOCAL_STATE" != "Synced" && "$WSREP_LOCAL_STATE" != "Donor" ]]
 then
-  echo "'wsrep_local_state_comment' == '$WSREP_LOCAL_STATE', node not joined/joining a cluster"
+  echo "fail"
   exit 1
 fi
 
-echo "Node ready"
+echo "ok"
 exit 0
