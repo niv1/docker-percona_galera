@@ -21,6 +21,7 @@ RUN \
   lsb-release \
   locales \
   socat \
+  pv \
   --no-install-recommends
 
 # generate a local to suppress warnings
