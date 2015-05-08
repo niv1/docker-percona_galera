@@ -24,7 +24,7 @@ EOF
 RUNNING_MINUTES=`expr $RUNNING_SECONDS / 60`
 
 # Just return if we are not yet running for $STARTUP_WAIT_MINUTES minutes
-if [ "$RUNNING_MINUTES" -le "$STARTUP_WAIT_MINUTES" ]
+if [ "$RUNNING_MINUTES" -l "$STARTUP_WAIT_MINUTES" ]
 then
   echo "Not yet running for $STARTUP_WAIT_MINUTES minutes..."
   exit 0
