@@ -3,7 +3,7 @@
 # Do health check for current galera node
 #
 
-STARTUP_WAIT_MINUTES="${1:-5}"
+STARTUP_WAIT_MINUTES="${1:-0}"
 RUNNING_ETIME=`ps -p1 -o etime | grep [0-9] | sed 's/\s//g'`
 RUNNING_SECONDS=`echo $RUNNING_ETIME | awk -F $':' -f <(cat - <<-'EOF'
   {
@@ -27,6 +27,19 @@ RUNNING_MINUTES=`expr $RUNNING_SECONDS / 60`
 if [ "$RUNNING_MINUTES" -le "$STARTUP_WAIT_MINUTES" ]
 then
   echo "Not yet running for $STARTUP_WAIT_MINUTES minutes..."
+  exit 0
+fi
+
+MYSQLD_PID=`pidof mysqld 2> /dev/null`
+# Check if mysqld is running
+if [ -z "$MYSQLD_PID" ]; then
+  echo "Exiting: mysqld is not running..."
+  exit 1
+fi
+
+# Check if SST is in progress for node
+if [ -f /var/lib/mysql/sst_in_progress ]; then
+  echo "Node sst in progress..."
   exit 0
 fi
 
